@@ -1,0 +1,28 @@
+{
+  "name": "todo-cli",
+  "version": "1.0.0",
+  "description": "Fast and beautiful CLI todo.txt manager",
+  "module": "index.ts",
+  "type": "module",
+  "bin": {
+    "todo": "./index.ts"
+  },
+  "scripts": {
+    "dev": "bun run index.ts",
+    "build": "bun build index.ts --compile --target=bun --outfile todo",
+    "test": "bun test"
+  },
+  "devDependencies": {
+    "@types/bun": "latest"
+  },
+  "peerDependencies": {
+    "typescript": "^5"
+  },
+  "dependencies": {
+    "@clack/prompts": "^0.11.0",
+    "chalk": "^5.6.2",
+    "cli-table3": "^0.6.5",
+    "commander": "^14.0.2",
+    "toml": "^3.0.0"
+  }
+}
