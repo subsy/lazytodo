@@ -2,6 +2,8 @@
 
 A fast and beautiful TUI and CLI application for managing todo.txt files, built with TypeScript and Bun.
 
+![Todo TUI Screenshot](todo-tui.png)
+
 ## Features
 
 - **Full todo.txt Format Support** - Compliant with the [todo.txt format specification](https://github.com/todotxt/todo.txt)
