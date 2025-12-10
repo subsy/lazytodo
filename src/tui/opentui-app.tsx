@@ -3,17 +3,20 @@ import { createRoot } from '@opentui/react';
 import { createCliRenderer } from '@opentui/core';
 import { useTodoStore } from './store/useTodoStore.ts';
 import { loadTasks } from '../storage.ts';
+import { AppContainer, Header, Footer, MainContent } from './components/Layout.tsx';
+import { TaskList } from './components/TaskList.tsx';
 
 interface AppProps {
   filePath?: string;
 }
 
 function App({ filePath }: AppProps) {
-  const tasks = useTodoStore(state => state.tasks);
   const filteredTasks = useTodoStore(state => state.filteredTasks);
   const setTasks = useTodoStore(state => state.setTasks);
   const focusedPanel = useTodoStore(state => state.focusedPanel);
   const activeFilter = useTodoStore(state => state.activeFilter);
+  const showCompleted = useTodoStore(state => state.showCompleted);
+  const sortMode = useTodoStore(state => state.sortMode);
 
   // Load tasks on mount
   useEffect(() => {
@@ -41,39 +44,25 @@ function App({ filePath }: AppProps) {
     title += `[Filter: ${filterPrefix}${filterValue}]`;
   }
 
+  // Build footer status
+  const panelName = focusedPanel === 'tasks' ? 'Tasks' :
+                    focusedPanel === 'priorities' ? 'Priorities' :
+                    focusedPanel === 'stats' ? 'Stats' :
+                    focusedPanel === 'projects' ? 'Projects' : 'Contexts';
+
+  const shortcuts = '? Help | TAB Panels | space Toggle | n New | v ' +
+    (showCompleted ? 'Hide' : 'Show') + ' All | q Quit';
+
+  const status = `Panel: ${panelName} | Sort: ${sortMode} | ${shortcuts}`;
+
   return (
-    <box flexDirection="column" width="100%" height="100%">
-      {/* Header */}
-      <box borderStyle="single" borderColor="gray" padding={1}>
-        <text color="yellow">{title}</text>
-      </box>
-
-      {/* Main Content */}
-      <box flexGrow={1} padding={1}>
-        {filteredTasks.length === 0 ? (
-          <text color="gray">No tasks found. Press 'n' to add a task.</text>
-        ) : (
-          <box flexDirection="column">
-            {filteredTasks.map((task) => (
-              <box key={task.id}>
-                <text>
-                  {task.completed ? '✓' : '○'} {' '}
-                  {task.priority ? `(${task.priority}) ` : ''}
-                  {task.text}
-                </text>
-              </box>
-            ))}
-          </box>
-        )}
-      </box>
-
-      {/* Footer */}
-      <box borderStyle="single" borderColor="gray" padding={1}>
-        <text color="gray">
-          Panel: {focusedPanel} | ? Help | TAB Panels | space Toggle | n New | q Quit
-        </text>
-      </box>
-    </box>
+    <AppContainer>
+      <Header>{title}</Header>
+      <MainContent>
+        <TaskList />
+      </MainContent>
+      <Footer>{status}</Footer>
+    </AppContainer>
   );
 }
 
