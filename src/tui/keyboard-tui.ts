@@ -67,9 +67,26 @@ function isCompletedToday(task: Task): boolean {
 
 export async function keyboardTUI(filePath?: string): Promise<void> {
   const config = await loadConfig();
+  const tasks = await loadTasks(filePath);
+
+  // Auto-detect priority mode from file if tasks have priorities
+  const tasksWithPriorities = tasks.filter(t => t.priority);
+  if (tasksWithPriorities.length > 0) {
+    const hasLetterPriority = tasksWithPriorities.some(t => /^[A-Z]$/.test(t.priority || ''));
+    const hasNumberPriority = tasksWithPriorities.some(t => /^[0-9]$/.test(t.priority || ''));
+
+    // If file has one type but config has another, update config
+    if (hasNumberPriority && !hasLetterPriority && config.priorityMode === 'letter') {
+      config.priorityMode = 'number';
+      await saveConfig(config);
+    } else if (hasLetterPriority && !hasNumberPriority && config.priorityMode === 'number') {
+      config.priorityMode = 'letter';
+      await saveConfig(config);
+    }
+  }
 
   const state: TUIState = {
-    tasks: await loadTasks(filePath),
+    tasks,
     filteredTasks: [],
     currentTaskIndex: 0,
     currentElementIndex: 0,
