@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import type { Task } from '../../parser/index.ts';
+import { saveTasks } from '../../storage.ts';
 
 export type SortMode = 'priority' | 'date' | 'project' | 'context';
 export type FocusedPanel = 'tasks' | 'priorities' | 'stats' | 'projects' | 'contexts';
@@ -37,7 +38,6 @@ interface TodoState {
   addTask: (task: Task) => void;
   updateTask: (id: number, updates: Partial<Task>) => void;
   deleteTask: (id: number) => void;
-  toggleTaskCompletion: (id: number) => void;
 
   // Actions: UI
   setCurrentTaskIndex: (index: number) => void;
@@ -45,8 +45,11 @@ interface TodoState {
   setFocusedPanel: (panel: FocusedPanel) => void;
   setPanelCursorIndex: (index: number) => void;
   setShowCompleted: (show: boolean) => void;
+  toggleShowCompleted: () => void;
   setHighlightOverdue: (highlight: boolean) => void;
+  toggleHighlightOverdue: () => void;
   setSortMode: (mode: SortMode) => void;
+  cycleSortMode: () => void;
 
   // Actions: Filters
   setSearchFilter: (filter: string) => void;
@@ -55,7 +58,11 @@ interface TodoState {
 
   // Actions: History
   saveToHistory: () => void;
-  undo: () => void;
+  saveHistory: () => void; // Alias for saveToHistory
+  undo: (filePath?: string) => Promise<void>;
+
+  // Actions: Task operations with file save
+  toggleTaskCompletion: (filePath?: string) => Promise<void>;
 
   // Actions: Computed
   updateFilteredTasks: () => void;
@@ -120,24 +127,6 @@ export const useTodoStore = create<TodoState>((set, get) => ({
     get().updateFilteredTasks();
   },
 
-  toggleTaskCompletion: (id) => {
-    get().saveToHistory();
-    const today = new Date().toISOString().split('T')[0];
-    set((state) => ({
-      tasks: state.tasks.map(t => {
-        if (t.id === id) {
-          return {
-            ...t,
-            completed: !t.completed,
-            completionDate: !t.completed ? today : null
-          };
-        }
-        return t;
-      })
-    }));
-    get().updateFilteredTasks();
-  },
-
   // UI Actions
   setCurrentTaskIndex: (index) => set({ currentTaskIndex: index }),
   setCurrentElementIndex: (index) => set({ currentElementIndex: index }),
@@ -147,9 +136,30 @@ export const useTodoStore = create<TodoState>((set, get) => ({
     set({ showCompleted: show });
     get().updateFilteredTasks();
   },
+  toggleShowCompleted: () => {
+    const { showCompleted, currentTaskIndex, filteredTasks } = get();
+    set({ showCompleted: !showCompleted });
+    get().updateFilteredTasks();
+    // Adjust currentTaskIndex if it's out of bounds
+    const newFiltered = get().filteredTasks;
+    if (currentTaskIndex >= newFiltered.length) {
+      set({ currentTaskIndex: Math.max(0, newFiltered.length - 1) });
+    }
+  },
   setHighlightOverdue: (highlight) => set({ highlightOverdue: highlight }),
+  toggleHighlightOverdue: () => {
+    set((state) => ({ highlightOverdue: !state.highlightOverdue }));
+  },
   setSortMode: (mode) => {
     set({ sortMode: mode });
+    get().updateFilteredTasks();
+  },
+  cycleSortMode: () => {
+    const modes: SortMode[] = ['priority', 'date', 'project', 'context'];
+    const { sortMode } = get();
+    const currentIndex = modes.indexOf(sortMode);
+    const nextIndex = (currentIndex + 1) % modes.length;
+    set({ sortMode: modes[nextIndex] });
     get().updateFilteredTasks();
   },
 
@@ -183,7 +193,12 @@ export const useTodoStore = create<TodoState>((set, get) => ({
     });
   },
 
-  undo: () => {
+  saveHistory: () => {
+    // Alias for saveToHistory
+    get().saveToHistory();
+  },
+
+  undo: async (filePath) => {
     const { history } = get();
     if (history.length === 0) return;
 
@@ -193,6 +208,38 @@ export const useTodoStore = create<TodoState>((set, get) => ({
       history: history.slice(0, -1)
     });
     get().updateFilteredTasks();
+
+    if (filePath) {
+      await saveTasks(previousTasks!, filePath);
+    }
+  },
+
+  // Task operations with file save
+  toggleTaskCompletion: async (filePath) => {
+    const { filteredTasks, currentTaskIndex, tasks } = get();
+    const task = filteredTasks[currentTaskIndex];
+    if (!task) return;
+
+    get().saveToHistory();
+    const today = new Date().toISOString().split('T')[0];
+
+    const updatedTasks = tasks.map(t => {
+      if (t.id === task.id) {
+        return {
+          ...t,
+          completed: !t.completed,
+          completionDate: !t.completed ? today : null
+        };
+      }
+      return t;
+    });
+
+    set({ tasks: updatedTasks });
+    get().updateFilteredTasks();
+
+    if (filePath) {
+      await saveTasks(updatedTasks, filePath);
+    }
   },
 
   // Computed Actions
