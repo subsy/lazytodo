@@ -1,285 +1,203 @@
-# Todo TUI
+# lazytodo
 
-A fast and beautiful TUI and CLI application for managing todo.txt files, built with TypeScript and Bun.
+![CodeRabbit Pull Request Reviews](https://img.shields.io/coderabbit/prs/github/subsy/lazytodo?utm_source=oss&utm_medium=github&utm_campaign=subsy%2Flazytodo&labelColor=171717&color=FF570A&link=https%3A%2F%2Fcoderabbit.ai&label=CodeRabbit+Reviews)
 
-![Todo TUI Screenshot](todo-tui.png)
+A fast, beautiful, vim-centric TUI for managing todo.txt files. Built with TypeScript, OpenTUI, and Bun.
+
+![lazytodo screenshot](assets/lazytodo.png)
 
 ## Features
 
-- **Full todo.txt Format Support** - Compliant with the [todo.txt format specification](https://github.com/todotxt/todo.txt)
-- **Fast & Lightweight** - Built with Bun for maximum performance
-- **Beautiful Output** - Colorized task display with priority indicators
-- **Interactive TUI Mode** - Full-screen terminal interface for managing tasks
-- **Multi-Panel Navigation** - TAB between panels and filter by priority, stats, projects, or contexts
-- **Single Binary** - Compile to a standalone executable with no dependencies
-- **Configurable** - Custom todo.txt file location via flag or environment variable
-- **Filtering & Search** - Filter by context, project, priority, or search text
+- **Vim-style Keybindings** - Navigate with `j/k`, `g/G`, and use `:` commands like `:w`, `:q`, `:wq`
+- **Full todo.txt Support** - Compliant with the [todo.txt format specification](https://github.com/todotxt/todo.txt)
+- **Multi-Panel Interface** - Priority chart, projects, contexts, and command history panels
+- **8 Built-in Themes** - Catppuccin, Dracula, Nord, Gruvbox, Tokyo Night, Solarized, One Dark, Monokai
+- **Braille Bar Charts** - High-resolution priority visualization with 20 levels of granularity
+- **Fast & Lightweight** - Single binary with no runtime dependencies
+- **Undo Support** - Revert changes with `u`
+- **Yank/Paste** - Copy tasks with `y`, paste with `p`
 
 ## Installation
 
 ### From Source
 
-1. Install [Bun](https://bun.sh):
 ```bash
+# Install Bun
 curl -fsSL https://bun.sh/install | bash
-```
 
-2. Clone and install dependencies:
-```bash
+# Clone and build
 git clone <repository-url>
-cd todo-cli
+cd lazytodo
 bun install
-```
-
-3. Build the binary:
-```bash
 bun run build
-```
 
-4. Move the binary to your PATH:
-```bash
-sudo mv todo /usr/local/bin/
+# Move to PATH
+sudo mv lazytodo /usr/local/bin/
 ```
 
 ### Development
 
-Run without building:
 ```bash
-bun run dev
-```
-
-### Try the Example
-
-An example Enterprise-themed todo list is included in the repository to showcase all features:
-```bash
-./todo -f todo.txt i
+bun run dev        # Run without building
+bun test           # Run tests
 ```
 
 ## Usage
 
-### Command Line Interface
-
-By default, tasks are stored in `~/todo.txt`. You can specify a different file with `-f` or set the `TODO_FILE` environment variable.
-
-#### Add a task
-```bash
-todo add "Call Mom +Family @phone"
-todo add "(A) Important task with high priority"
-todo add "Task with due date due:2025-12-15"
-```
-
-#### List tasks
-```bash
-todo list                    # Show active tasks
-todo ls                      # Alias for list
-todo list --all              # Show all tasks including completed
-todo list -c phone           # Filter by context (@phone)
-todo list -p Work            # Filter by project (+Work)
-todo list --priority A       # Filter by priority
-todo list -s "pull request"  # Search by text
-```
-
-#### Complete a task
-```bash
-todo do 1                    # Mark task 1 as complete
-```
-
-#### Edit a task
-```bash
-todo edit 1 "New task text"
-todo edit 1 "(B) Updated task with priority"
-```
-
-#### Delete a task
-```bash
-todo delete 1                # Delete task 1
-todo rm 1                    # Alias for delete
-```
-
-#### Manage priorities
-```bash
-todo pri 1 A                 # Set priority A for task 1
-todo depri 1                 # Remove priority from task 1
-```
-
-### Interactive TUI Mode
-
-Launch the keyboard-driven interactive mode for a fast, visual task management experience:
+### TUI Mode (Recommended)
 
 ```bash
-todo interactive
-todo i                       # Alias
+lazytodo tui                    # Launch TUI with default ~/todo.txt
+lazytodo -f todo.txt tui        # Use specific file
 ```
 
-#### Keyboard Shortcuts
+### Keyboard Shortcuts
 
-**Navigation:**
-- `↑`/`k`, `↓`/`j` - Move up/down (tasks or within panels)
-- `←`/`h`, `→`/`l` - Move left/right between task elements (priority, date, text, tags)
-- `TAB` - Cycle through panels (tasks → priorities → stats → projects → contexts)
-- `g`, `G` - Go to top/bottom of list or panel
+#### Navigation
+| Key | Action |
+|-----|--------|
+| `j` / `↓` | Move down |
+| `k` / `↑` | Move up |
+| `g` | Go to top |
+| `G` | Go to bottom |
+| `TAB` | Cycle panels (Tasks → Priorities → Projects → Contexts) |
+| `ESC` | Return to tasks / Clear filter |
 
-**Panel Actions:**
-- `enter` - (in non-task panels) Filter by selected item
-- `ESC` - Return to tasks panel or clear active filter
+#### Task Actions
+| Key | Action |
+|-----|--------|
+| `Space` | Toggle task completion |
+| `Enter` / `e` / `i` | Edit task |
+| `n` / `a` | Add new task |
+| `d` | Add due date |
+| `x` | Delete task |
+| `y` | Yank (copy) task |
+| `p` | Paste task |
+| `0-9` | Set priority (number mode) |
+| `Shift+A-Z` | Set priority (letter mode) |
 
-**Task Actions:**
-- `space` - Toggle task completion (done/not done)
-- `enter` or `e` - Edit task text
-- `Shift+Letter` - Set priority (e.g., `Shift+A` for priority A)
-- `p` - Add project tag (+tag)
-- `c` - Add context tag (@tag)
-- `d` - Add due date
-- `n` or `a` - Add new task
-- `x` - Delete entire task
-- `delete`/`backspace` - Delete selected element (priority, tag, metadata, etc.)
+#### View
+| Key | Action |
+|-----|--------|
+| `v` | Toggle show completed tasks |
+| `/` | Search tasks |
+| `s` | Cycle sort mode |
+| `o` | Toggle highlight overdue |
+| `u` | Undo last action |
+| `?` | Show help |
+| `,` | Open settings |
 
-**View:**
-- `v` - Toggle show/hide completed tasks
-- `/` - Search/filter tasks
-- `s` - Cycle sort mode (priority → date → project → context)
-- `r` - Refresh from file
+#### Vim Commands
+| Command | Action |
+|---------|--------|
+| `:q` / `:quit` | Quit |
+| `:w` / `:write` | Save |
+| `:wq` / `:x` | Save and quit |
+| `:help` | Show help |
+| `:set` | Open settings |
+| `:theme <name>` | Switch theme |
+| `:sort <mode>` | Change sort mode |
 
-**Other:**
-- `u` - Undo last action
-- `?` - Show help overlay
-- `q` or `ESC` - Quit
+### CLI Mode
 
-#### Element-Level Navigation
-
-The TUI allows you to navigate within each task element by element using `←`/`→` keys. Elements are highlighted when selected, and you can delete individual elements (except checkbox and main text) using the `delete` key. This makes it easy to remove a priority, delete a specific tag, or remove metadata without editing the entire task.
-
-#### Panel Navigation & Filtering
-
-The TUI features a multi-panel interface with powerful filtering capabilities. Press `TAB` to cycle through five panels:
-
-**Tasks Panel** - Main task list with checkboxes and full task details
-- Navigate with `↑`/`↓` or `k`/`j`
-- Select elements within tasks with `←`/`→` or `h`/`l`
-- Press `enter` or `e` to edit tasks
-
-**Priorities Panel** - Visual bar chart of task priorities
-- Navigate with `↑`/`↓` to select a priority (A-Z or 0-9)
-- Press `enter` to filter tasks by the selected priority
-- Bar chart uses sub-character granularity for precise visualization
-- Focused panel shows highlighted borders and selected priority is inverted
-
-**Stats Panel** - Task statistics and metrics
-- DUE/OVERDUE: Filter tasks that are overdue or due today
-- DONE TODAY: Filter tasks completed today
-- ACTIVE: Filter to show only active (incomplete) tasks
-- Navigate with `↑`/`↓` and press `enter` to apply filter
-
-**Projects Panel** - All project tags (+tag)
-- Navigate with `↑`/`↓` to select a project
-- Press `enter` to filter tasks by the selected project
-- Shows all unique project tags sorted alphabetically
-
-**Contexts Panel** - All context tags (@tag)
-- Navigate with `↑`/`↓` to select a context
-- Press `enter` to filter tasks by the selected context
-- Shows all unique context tags sorted alphabetically
-
-**Visual Feedback:**
-- Focused panel has highlighted borders in yellow
-- Selected item within panel shows with `>` cursor and inverted colors
-- Active filter displays in title bar (e.g., "[Filter: +mission]" or "[Filter: A]")
-- Status bar shows current panel name and filtering instructions
-
-**Clearing Filters:**
-- Press `ESC` when in tasks panel with active filter to clear it
-- Press `ESC` from any other panel to return to tasks panel
-- Apply a new filter to replace the current one
-
-## Todo.txt Format
-
-This tool follows the [todo.txt format specification](https://github.com/todotxt/todo.txt):
-
-```
-(A) 2025-12-10 Call Mom +Family @phone due:2025-12-15
+```bash
+lazytodo list                    # List active tasks
+lazytodo add "Call Mom +Family"  # Add task
+lazytodo do 1                    # Complete task 1
+lazytodo pri 1 A                 # Set priority A
+lazytodo edit 1 "New text"       # Edit task
+lazytodo delete 1                # Delete task
 ```
 
-Format breakdown:
-- `(A)` - Priority (A-Z, optional)
-- `2025-12-10` - Creation date (YYYY-MM-DD, optional)
-- `+Family` - Project tag (optional, multiple allowed)
-- `@phone` - Context tag (optional, multiple allowed)
-- `due:2025-12-15` - Custom metadata (key:value, optional)
-
-Completed tasks:
-```
-x 2025-12-10 (B) 2025-12-09 Task description
+#### Filtering
+```bash
+lazytodo list -c phone           # Filter by @context
+lazytodo list -p Work            # Filter by +project
+lazytodo list --priority A       # Filter by priority
+lazytodo list -s "search term"   # Search text
+lazytodo list --all              # Include completed
 ```
 
-Format:
-- `x` - Completion marker
-- `2025-12-10` - Completion date
-- `(B)` - Original priority
-- `2025-12-09` - Creation date
+## Panels
+
+### Priority Chart
+Visual bar chart showing task distribution by priority. Uses braille characters for high-resolution display with 20 levels of granularity.
+
+### Projects Panel
+Lists all `+project` tags. Press `Enter` to filter tasks by project.
+
+### Contexts Panel
+Lists all `@context` tags. Press `Enter` to filter tasks by context.
+
+### Command History
+Read-only log of recent commands (not included in TAB navigation).
+
+### Stats (Header)
+Shows DUE/OVERDUE count, DONE TODAY, and ACTIVE tasks.
 
 ## Configuration
 
+Config file: `~/.config/todo-tui/config.toml`
+
+```toml
+# Priority mode: 'letter' (A-Z) or 'number' (0-9)
+priorityMode = "number"
+
+# Color theme
+theme = "catppuccin"
+```
+
+### Available Themes
+- `catppuccin` (default)
+- `dracula`
+- `nord`
+- `gruvbox`
+- `tokyonight`
+- `solarized`
+- `onedark`
+- `monokai`
+
+### Priority Format Detection
+
+When opening a file, lazytodo detects the priority format used (letter A-Z or number 0-9). If it differs from your settings, you'll be prompted to:
+
+1. **Convert the file** - Transform all priorities to match your settings
+2. **Switch settings** - Adapt your settings to match the file format
+3. **Ignore** - Keep both formats as-is
+
+This ensures consistency and prevents confusion when working with files created with different priority modes.
+
 ### Todo File Location
 
-By default, the app searches for `todo.txt` in this order:
-1. `TODO_FILE` environment variable (if set)
-2. Current directory (`./todo.txt`)
-3. Home directory (`~/todo.txt`)
+Priority order:
+1. `-f` flag: `lazytodo -f ~/my-todos.txt tui`
+2. `TODO_FILE` environment variable
+3. `./todo.txt` (current directory)
+4. `~/todo.txt` (home directory)
 
-If no file is found, an error is displayed with instructions.
+## Todo.txt Format
 
-You can override the location:
-
-Via command line flag:
-```bash
-todo -f ~/Documents/my-todos.txt list
+```
+(A) 2025-12-10 Call Mom +Family @phone due:2025-12-15
+x 2025-12-11 (A) 2025-12-10 Completed task +Project @context
 ```
 
-Via environment variable:
-```bash
-export TODO_FILE=~/Documents/my-todos.txt
-todo list
-```
-
-## Development
-
-### Run Tests
-```bash
-bun test
-```
-
-### Build Binary
-```bash
-bun run build
-```
-
-### Project Structure
-```
-todo-cli/
-├── src/
-│   ├── parser/         # Todo.txt format parser
-│   ├── commands/       # CLI command implementations
-│   ├── ui/            # UI formatting and colors
-│   ├── tui/           # Interactive TUI mode
-│   └── storage.ts     # File I/O operations
-├── index.ts           # Main CLI entry point
-└── package.json
-```
+- `(A)` - Priority (A-Z or 0-9)
+- `2025-12-10` - Creation date
+- `+Family` - Project tag
+- `@phone` - Context tag
+- `due:2025-12-15` - Due date metadata
+- `x` - Completion marker
+- Second date after `x` - Completion date
 
 ## Tech Stack
 
 - **Runtime:** [Bun](https://bun.sh)
 - **Language:** TypeScript
-- **CLI Framework:** Commander.js
-- **UI Libraries:**
-  - chalk - Colors and text styling
-  - cli-table3 - Beautiful tables
-  - @clack/prompts - Interactive TUI elements
+- **TUI Framework:** [@opentui/react](https://github.com/anthropics/opentui)
+- **State Management:** Zustand
+- **CLI:** Commander.js
 
 ## License
 
 MIT
-
-## Credits
-
-Built following the [todo.txt format specification](https://github.com/todotxt/todo.txt).

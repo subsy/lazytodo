@@ -1,28 +1,33 @@
 {
-  "name": "todo-cli",
+  "name": "lazytodo",
   "version": "1.0.0",
-  "description": "Fast and beautiful CLI todo.txt manager",
+  "description": "Fast and beautiful vim-centric TUI for todo.txt",
   "module": "index.ts",
   "type": "module",
   "bin": {
-    "todo": "./index.ts"
+    "lazytodo": "./index.ts"
   },
   "scripts": {
     "dev": "bun run index.ts",
-    "build": "bun build index.ts --compile --target=bun --outfile todo",
+    "build": "bun build index.ts --compile --target=bun --outfile lazytodo",
     "test": "bun test"
   },
   "devDependencies": {
-    "@types/bun": "latest"
+    "@types/bun": "latest",
+    "@types/react": "^19.2.7",
+    "zustand": "^5.0.9"
   },
   "peerDependencies": {
     "typescript": "^5"
   },
   "dependencies": {
     "@clack/prompts": "^0.11.0",
+    "@opentui/core": "^0.1.60",
+    "@opentui/react": "^0.1.60",
     "chalk": "^5.6.2",
     "cli-table3": "^0.6.5",
     "commander": "^14.0.2",
+    "react": "^19.2.1",
     "toml": "^3.0.0"
   }
 }
