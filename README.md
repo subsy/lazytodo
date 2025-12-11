@@ -4,6 +4,8 @@
 
 A fast, beautiful, vim-centric TUI for managing todo.txt files. Built with TypeScript, OpenTUI, and Bun.
 
+![lazytodo screenshot](assets/lazytodo.png)
+
 ## Features
 
 - **Vim-style Keybindings** - Navigate with `j/k`, `g/G`, and use `:` commands like `:w`, `:q`, `:wq`
