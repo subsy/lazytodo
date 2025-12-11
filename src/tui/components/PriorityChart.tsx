@@ -50,9 +50,12 @@ export function PriorityChart() {
   const isFocused = focusedPanel === 'priorities';
   const borderColor = isFocused ? theme.colors.highlight : theme.colors.border;
 
+  // Calculate safe cursor index once, used throughout component
+  const safeIndex = Math.max(0, Math.min(panelCursorIndex, shownPriorities.length - 1));
+
   // Build selection indicator row (arrow pointing up at selected)
   const selectorStr = shownPriorities.map((_, i) => {
-    const isSelected = isFocused && panelCursorIndex === i;
+    const isSelected = isFocused && safeIndex === i;
     return isSelected ? '▲ ' : '  ';
   }).join('');
 
@@ -75,7 +78,6 @@ export function PriorityChart() {
 
     return shownPriorities.map((priority, i) => {
       const height = dotHeights[i] ?? 0;
-      const safeIndex = Math.max(0, Math.min(panelCursorIndex, shownPriorities.length - 1));
       const isSelected = isFocused && safeIndex === i;
 
       let char: string;
@@ -85,7 +87,9 @@ export function PriorityChart() {
       } else if (height > rowBottomDot) {
         // Partial braille - show appropriate number of dots
         const dots = height - rowBottomDot;
-        char = BRAILLE_BARS[dots] || ' ';
+        // Ensure dots is within valid range for BRAILLE_BARS array
+        const clampedDots = Math.max(0, Math.min(dots, BRAILLE_BARS.length - 1));
+        char = BRAILLE_BARS[clampedDots] ?? ' ';
       } else {
         // Empty
         char = ' ';
@@ -96,7 +100,6 @@ export function PriorityChart() {
   });
 
   // Build label row data
-  const safeIndex = Math.max(0, Math.min(panelCursorIndex, shownPriorities.length - 1));
   const labelRow = shownPriorities.map((p, i) => {
     const isSelected = isFocused && safeIndex === i;
     return { char: p, isSelected, priority: p };

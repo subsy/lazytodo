@@ -1,5 +1,5 @@
 import { useCallback } from 'react';
-import { useKeyboard as useOpenTUIKeyboard, useAppContext } from '@opentui/react';
+import { useKeyboard as useOpenTUIKeyboard } from '@opentui/react';
 import { useTodoStore, FocusedPanel } from '../store/useTodoStore.ts';
 import { saveTasks } from '../../storage.ts';
 
@@ -11,7 +11,6 @@ const ALL_LETTER_PRIORITIES = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J',
 const ALL_NUMBER_PRIORITIES = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9'];
 
 export function useKeyboardNavigation(filePath?: string) {
-  const appContext = useAppContext();
   const {
     tasks,
     filteredTasks,
@@ -154,14 +153,8 @@ export function useKeyboardNavigation(filePath?: string) {
       return;
     }
 
-    // Ctrl+C to quit - use renderer's cleanup if available, otherwise fallback to process.exit
-    if (ctrl && keyName === 'c') {
-      // Attempt graceful shutdown through OpenTUI renderer
-      if (appContext?.renderer?.cleanup) {
-        appContext.renderer.cleanup();
-      }
-      process.exit(0);
-    }
+    // Ctrl+C is handled by OpenTUI's exitOnCtrlC option in createCliRenderer
+    // No need to handle it here - the renderer manages graceful shutdown
 
     // : - open command mode (vim style)
     if (key.sequence === ':' || keyName === ':') {
