@@ -17,34 +17,61 @@ export function FormatMismatchDialog({ filePath }: FormatMismatchDialogProps) {
 
   const [selectedOption, setSelectedOption] = React.useState(0);
 
-  // Determine what options to show based on detected format
+  // For mixed format, we can't determine a single file format
+  // User must choose which format to convert to or ignore
+  const isMixed = detectedFormat === 'mixed';
   const fileFormat = detectedFormat === 'letter' ? 'letter' : 'number';
   const settingsFormat = priorityMode;
 
-  const options = [
-    {
-      label: `Convert file to ${settingsFormat} priorities`,
-      description: `Change all ${fileFormat} priorities (${fileFormat === 'letter' ? 'A-Z' : '0-9'}) to ${settingsFormat} (${settingsFormat === 'letter' ? 'A-Z' : '0-9'})`,
-      action: async () => {
-        await convertTasksToFormat(settingsFormat, filePath);
-      },
-    },
-    {
-      label: `Switch to ${fileFormat} priority mode`,
-      description: `Update your settings to use ${fileFormat} priorities (${fileFormat === 'letter' ? 'A-Z' : '0-9'})`,
-      action: () => {
-        setPriorityMode(fileFormat as PriorityMode);
-        hideFormatMismatch();
-      },
-    },
-    {
-      label: 'Ignore (keep both)',
-      description: 'Leave the file as-is and continue with current settings',
-      action: () => {
-        hideFormatMismatch();
-      },
-    },
-  ];
+  // Build options based on whether format is mixed or single
+  const options = isMixed
+    ? [
+        {
+          label: `Convert all to letter priorities (A-Z)`,
+          description: 'Convert number priorities to letters (0→A, 1→B, etc.)',
+          action: () => {
+            void convertTasksToFormat('letter', filePath);
+          },
+        },
+        {
+          label: `Convert all to number priorities (0-9)`,
+          description: 'Convert letter priorities to numbers (A→0, B→1, etc.)',
+          action: () => {
+            void convertTasksToFormat('number', filePath);
+          },
+        },
+        {
+          label: 'Ignore (keep mixed)',
+          description: 'Leave the file as-is with mixed priority formats',
+          action: () => {
+            hideFormatMismatch();
+          },
+        },
+      ]
+    : [
+        {
+          label: `Convert file to ${settingsFormat} priorities`,
+          description: `Change all ${fileFormat} priorities (${fileFormat === 'letter' ? 'A-Z' : '0-9'}) to ${settingsFormat} (${settingsFormat === 'letter' ? 'A-Z' : '0-9'})`,
+          action: () => {
+            void convertTasksToFormat(settingsFormat, filePath);
+          },
+        },
+        {
+          label: `Switch to ${fileFormat} priority mode`,
+          description: `Update your settings to use ${fileFormat} priorities (${fileFormat === 'letter' ? 'A-Z' : '0-9'})`,
+          action: () => {
+            setPriorityMode(fileFormat as PriorityMode);
+            hideFormatMismatch();
+          },
+        },
+        {
+          label: 'Ignore (keep both)',
+          description: 'Leave the file as-is and continue with current settings',
+          action: () => {
+            hideFormatMismatch();
+          },
+        },
+      ];
 
   useKeyboard((key: any) => {
     const keyName = key.name || key.char;
