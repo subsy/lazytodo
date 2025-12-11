@@ -18,10 +18,10 @@ function ThemePreview({ theme, isSelected, activeTheme }: { theme: Theme; isSele
 
   return (
     <box flexDirection="row" backgroundColor={isSelected ? activeTheme.colors.selection : undefined}>
-      <text color={isSelected ? activeTheme.colors.highlight : activeTheme.colors.text}>
+      <text fg={isSelected ? activeTheme.colors.highlight : activeTheme.colors.text}>
         {isSelected ? '> ' : '  '}
       </text>
-      <text color={isSelected ? activeTheme.colors.highlight : activeTheme.colors.text} bold={isSelected}>
+      <text fg={isSelected ? activeTheme.colors.highlight : activeTheme.colors.text} bold={isSelected}>
         {theme.name.padEnd(14)}
       </text>
       <ColorSwatch color={c.priorityHigh} />
@@ -74,15 +74,15 @@ export function ThemeSelector({ onClose, onSelect, currentTheme }: ThemeSelector
 
   return (
     <box flexDirection="column" padding={2} backgroundColor={activeTheme.colors.background}>
-      <text color={activeTheme.colors.highlight} bold>Select Theme</text>
+      <text fg={activeTheme.colors.highlight} bold>Select Theme</text>
       <text> </text>
 
       <box flexDirection="row">
-        <text color={activeTheme.colors.muted}>{'                '.padEnd(16)}</text>
-        <text color={activeTheme.colors.muted}>Pri   </text>
-        <text color={activeTheme.colors.muted}>UI  </text>
-        <text color={activeTheme.colors.muted}>Tags    </text>
-        <text color={activeTheme.colors.muted}>Base</text>
+        <text fg={activeTheme.colors.muted}>{'                '.padEnd(16)}</text>
+        <text fg={activeTheme.colors.muted}>Pri   </text>
+        <text fg={activeTheme.colors.muted}>UI  </text>
+        <text fg={activeTheme.colors.muted}>Tags    </text>
+        <text fg={activeTheme.colors.muted}>Base</text>
       </box>
       <text> </text>
 
@@ -96,8 +96,8 @@ export function ThemeSelector({ onClose, onSelect, currentTheme }: ThemeSelector
       ))}
 
       <text> </text>
-      <text color={activeTheme.colors.muted}>↑/↓ or j/k to navigate • Enter to select • ESC to cancel</text>
-      <text color={activeTheme.colors.textDim}>Current theme: {themes[currentTheme]?.name || currentTheme}</text>
+      <text fg={activeTheme.colors.muted}>↑/↓ or j/k to navigate • Enter to select • ESC to cancel</text>
+      <text fg={activeTheme.colors.textDim}>Current theme: {themes[currentTheme]?.name || currentTheme}</text>
     </box>
   );
 }

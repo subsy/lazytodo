@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useRef, useCallback } from 'react';
 import { createRoot } from '@opentui/react';
 import { createCliRenderer } from '@opentui/core';
 import { useTodoStore } from './store/useTodoStore.ts';
@@ -8,7 +8,7 @@ import { TaskList } from './components/TaskList.tsx';
 import { PanelContainer } from './components/PanelContainer.tsx';
 import { CommandBar } from './components/CommandBar.tsx';
 import { HelpScreen } from './components/HelpScreen.tsx';
-import { ThemeSelector } from './components/ThemeSelector.tsx';
+import { SettingsScreen } from './components/SettingsScreen.tsx';
 import { useKeyboardNavigation } from './hooks/useKeyboard.ts';
 import { ThemeProvider } from './themes/ThemeContext.tsx';
 
@@ -28,19 +28,47 @@ function AppContent({ filePath }: AppProps) {
   const commandBarDefaultValue = useTodoStore(state => state.commandBarDefaultValue);
   const closeCommandBar = useTodoStore(state => state.closeCommandBar);
   const handleCommandBarSubmit = useTodoStore(state => state.handleCommandBarSubmit);
+  const commandBarMode = useTodoStore(state => state.commandBarMode);
+  const setSearchFilter = useTodoStore(state => state.setSearchFilter);
+  const updateFilteredTasks = useTodoStore(state => state.updateFilteredTasks);
   const showHelp = useTodoStore(state => state.showHelp);
-  const showThemeSelector = useTodoStore(state => state.showThemeSelector);
-  const currentTheme = useTodoStore(state => state.currentTheme);
-  const toggleThemeSelector = useTodoStore(state => state.toggleThemeSelector);
+  const showSettings = useTodoStore(state => state.showSettings);
+  const toggleSettings = useTodoStore(state => state.toggleSettings);
+
+  const setPriorityMode = useTodoStore(state => state.setPriorityMode);
   const setTheme = useTodoStore(state => state.setTheme);
 
   // Setup keyboard navigation
   useKeyboardNavigation(filePath);
 
-  // Load tasks on mount
+  // Debounced search handler
+  const searchTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const handleSearchChange = useCallback((value: string) => {
+    if (commandBarMode !== 'search') return;
+
+    // Clear previous timeout
+    if (searchTimeoutRef.current) {
+      clearTimeout(searchTimeoutRef.current);
+    }
+
+    // Debounce: update search filter after 150ms
+    searchTimeoutRef.current = setTimeout(() => {
+      setSearchFilter(value);
+      updateFilteredTasks();
+    }, 150);
+  }, [commandBarMode, setSearchFilter, updateFilteredTasks]);
+
+  // Load tasks and config on mount
   useEffect(() => {
     const loadData = async () => {
       try {
+        // Load config first
+        const { loadConfig } = await import('../config.ts');
+        const config = await loadConfig();
+        setPriorityMode(config.priorityMode);
+        setTheme(config.theme);
+
+        // Then load tasks
         const loadedTasks = await loadTasks(filePath);
         setTasks(loadedTasks);
       } catch (error) {
@@ -48,11 +76,14 @@ function AppContent({ filePath }: AppProps) {
       }
     };
     loadData();
-  }, [filePath, setTasks]);
+  }, [filePath, setTasks, setPriorityMode, setTheme]);
 
   // Build title with filter
+  const searchFilter = useTodoStore(state => state.searchFilter);
   let title = ` Todo.txt (${filteredTasks.length} tasks) `;
-  if (activeFilter) {
+  if (searchFilter) {
+    title += `[Search: "${searchFilter}"]`;
+  } else if (activeFilter) {
     let filterValue = activeFilter.value;
     if (filterValue === 'dueOverdue') filterValue = 'DUE/OVERDUE';
     if (filterValue === 'doneToday') filterValue = 'DONE TODAY';
@@ -69,20 +100,16 @@ function AppContent({ filePath }: AppProps) {
                     focusedPanel === 'stats' ? 'Stats' :
                     focusedPanel === 'projects' ? 'Projects' : 'Contexts';
 
-  const shortcuts = '? Help | t Theme | TAB Panels | space Toggle | n New | v ' +
-    (showCompleted ? 'Hide' : 'Show') + ' All | q Quit';
+  const priorityMode = useTodoStore(state => state.priorityMode);
+  const priorityHint = priorityMode === 'letter' ? 'Shift+A-Z' : '0-9';
+
+  const shortcuts = `? Help | TAB Panels | ${priorityHint} Pri | n New | :w Save | :q Quit`;
 
   const status = `Panel: ${panelName} | Sort: ${sortMode} | ${shortcuts}`;
 
-  // Show theme selector if active
-  if (showThemeSelector) {
-    return (
-      <ThemeSelector
-        currentTheme={currentTheme}
-        onClose={toggleThemeSelector}
-        onSelect={setTheme}
-      />
-    );
+  // Show settings screen if active
+  if (showSettings) {
+    return <SettingsScreen onClose={toggleSettings} filePath={filePath} />;
   }
 
   // Show help screen if active
@@ -103,6 +130,7 @@ function AppContent({ filePath }: AppProps) {
           defaultValue={commandBarDefaultValue}
           onSubmit={(value) => handleCommandBarSubmit(value, filePath)}
           onCancel={closeCommandBar}
+          onChange={commandBarMode === 'search' ? handleSearchChange : undefined}
         />
       ) : (
         <Footer>{status}</Footer>

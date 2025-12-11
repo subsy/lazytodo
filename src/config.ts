@@ -1,18 +1,28 @@
-import { existsSync } from 'fs';
-import { join } from 'path';
+import { existsSync, mkdirSync } from 'fs';
+import { join, dirname } from 'path';
 import { homedir } from 'os';
 import * as TOML from 'toml';
 
 export interface Config {
   priorityMode: 'letter' | 'number'; // A-Z or 0-9
+  theme: string; // Theme name (catppuccin, dracula, nord, etc.)
 }
 
 const DEFAULT_CONFIG: Config = {
   priorityMode: 'letter',
+  theme: 'catppuccin',
 };
 
 function getConfigPath(): string {
-  return process.env.TODO_CONFIG || join(homedir(), '.todo-cli.toml');
+  return process.env.TODO_CONFIG || join(homedir(), '.config', 'todo-tui', 'config.toml');
+}
+
+function ensureConfigDir(): void {
+  const configPath = getConfigPath();
+  const configDir = dirname(configPath);
+  if (!existsSync(configDir)) {
+    mkdirSync(configDir, { recursive: true });
+  }
 }
 
 export async function loadConfig(): Promise<Config> {
@@ -33,14 +43,23 @@ export async function loadConfig(): Promise<Config> {
   }
 }
 
-export async function saveConfig(config: Config): Promise<void> {
+export async function saveConfig(partialConfig: Partial<Config>): Promise<void> {
   const configPath = getConfigPath();
+  ensureConfigDir();
 
   try {
+    // Load existing config first to merge
+    const existingConfig = await loadConfig();
+    const config = { ...existingConfig, ...partialConfig };
+
     // Create TOML content manually (simple enough structure)
-    const tomlContent = `# Todo CLI Configuration
+    const tomlContent = `# Todo TUI Configuration
+
 # Priority mode: 'letter' (A-Z) or 'number' (0-9)
 priorityMode = "${config.priorityMode}"
+
+# Color theme
+theme = "${config.theme}"
 `;
     await Bun.write(configPath, tomlContent);
   } catch (error) {

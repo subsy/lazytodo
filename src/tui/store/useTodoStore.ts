@@ -1,10 +1,12 @@
 import { create } from 'zustand';
 import type { Task } from '../../parser/index.ts';
 import { saveTasks } from '../../storage.ts';
+import { saveConfig, type Config } from '../../config.ts';
 
 export type SortMode = 'priority' | 'date' | 'project' | 'context';
 export type FocusedPanel = 'tasks' | 'priorities' | 'stats' | 'projects' | 'contexts';
 export type FilterType = 'priority' | 'project' | 'context' | 'dueOverdue' | 'doneToday' | 'active';
+export type PriorityMode = 'letter' | 'number';
 
 export interface ActiveFilter {
   type: FilterType;
@@ -22,6 +24,8 @@ interface TodoState {
   currentElementIndex: number;
   focusedPanel: FocusedPanel;
   panelCursorIndex: number;
+  projectsCursorIndex: number;
+  contextsCursorIndex: number;
   showCompleted: boolean;
   highlightOverdue: boolean;
   sortMode: SortMode;
@@ -32,7 +36,7 @@ interface TodoState {
 
   // Command bar
   commandBarActive: boolean;
-  commandBarMode: 'none' | 'newTask' | 'editTask' | 'search' | 'addProject' | 'addContext' | 'addDueDate' | 'confirm';
+  commandBarMode: 'none' | 'newTask' | 'editTask' | 'search' | 'addProject' | 'addContext' | 'addDueDate' | 'confirm' | 'command';
   commandBarPrompt: string;
   commandBarDefaultValue: string;
   commandBarData?: any;
@@ -40,12 +44,22 @@ interface TodoState {
   // Help/Overlay
   showHelp: boolean;
   showThemeSelector: boolean;
+  showSettings: boolean;
 
   // Theme
   currentTheme: string;
 
+  // Config
+  priorityMode: PriorityMode;
+
   // History
   history: Task[][];
+
+  // Clipboard (for yank/paste)
+  yankedTask: Task | null;
+
+  // Command log
+  commandLog: string[];
 
   // Actions: Data
   setTasks: (tasks: Task[]) => void;
@@ -58,6 +72,8 @@ interface TodoState {
   setCurrentElementIndex: (index: number) => void;
   setFocusedPanel: (panel: FocusedPanel) => void;
   setPanelCursorIndex: (index: number) => void;
+  setProjectsCursorIndex: (index: number) => void;
+  setContextsCursorIndex: (index: number) => void;
   setShowCompleted: (show: boolean) => void;
   toggleShowCompleted: () => void;
   setHighlightOverdue: (highlight: boolean) => void;
@@ -75,10 +91,12 @@ interface TodoState {
   closeCommandBar: () => void;
   handleCommandBarSubmit: (value: string, filePath?: string) => Promise<void>;
 
-  // Actions: Help/Theme
+  // Actions: Help/Theme/Settings
   toggleHelp: () => void;
   toggleThemeSelector: () => void;
   setTheme: (themeName: string) => void;
+  toggleSettings: () => void;
+  setPriorityMode: (mode: PriorityMode) => void;
 
   // Actions: History
   saveToHistory: () => void;
@@ -87,6 +105,13 @@ interface TodoState {
 
   // Actions: Task operations with file save
   toggleTaskCompletion: (filePath?: string) => Promise<void>;
+
+  // Actions: Clipboard
+  yankTask: () => void;
+  pasteTask: (filePath?: string) => Promise<void>;
+
+  // Actions: Command log
+  logCommand: (command: string) => void;
 
   // Actions: Computed
   updateFilteredTasks: () => void;
@@ -119,6 +144,8 @@ export const useTodoStore = create<TodoState>((set, get) => ({
   currentElementIndex: 0,
   focusedPanel: 'tasks',
   panelCursorIndex: 0,
+  projectsCursorIndex: 0,
+  contextsCursorIndex: 0,
   showCompleted: false,
   highlightOverdue: false,
   sortMode: 'priority',
@@ -129,8 +156,12 @@ export const useTodoStore = create<TodoState>((set, get) => ({
   commandBarDefaultValue: '',
   showHelp: false,
   showThemeSelector: false,
+  showSettings: false,
   currentTheme: 'catppuccin',
+  priorityMode: 'letter',
   history: [],
+  yankedTask: null,
+  commandLog: [],
 
   // Data Actions
   setTasks: (tasks) => {
@@ -163,6 +194,8 @@ export const useTodoStore = create<TodoState>((set, get) => ({
   setCurrentElementIndex: (index) => set({ currentElementIndex: index }),
   setFocusedPanel: (panel) => set({ focusedPanel: panel, panelCursorIndex: 0 }),
   setPanelCursorIndex: (index) => set({ panelCursorIndex: index }),
+  setProjectsCursorIndex: (index) => set({ projectsCursorIndex: index }),
+  setContextsCursorIndex: (index) => set({ contextsCursorIndex: index }),
   setShowCompleted: (show) => {
     set({ showCompleted: show });
     get().updateFilteredTasks();
@@ -406,6 +439,53 @@ export const useTodoStore = create<TodoState>((set, get) => ({
           await saveTasks(updatedTasks, filePath);
         }
       }
+    } else if (commandBarMode === 'command') {
+      // Handle vim-style : commands
+      const cmd = value.trim().toLowerCase();
+
+      if (cmd === 'q' || cmd === 'quit') {
+        process.exit(0);
+      } else if (cmd === 'q!' || cmd === 'quit!') {
+        process.exit(0);
+      } else if (cmd === 'w' || cmd === 'write') {
+        if (filePath) {
+          await saveTasks(tasks, filePath);
+          get().logCommand('wrote file');
+        }
+      } else if (cmd === 'wq' || cmd === 'wq!' || cmd === 'x') {
+        if (filePath) {
+          await saveTasks(tasks, filePath);
+        }
+        process.exit(0);
+      } else if (cmd === 'help' || cmd === 'h') {
+        get().toggleHelp();
+      } else if (cmd === 'set' || cmd === 'settings') {
+        get().toggleSettings();
+      } else if (cmd === 'e' || cmd === 'edit' || cmd === 'e!' || cmd === 'reload') {
+        // Reload from file - handled by caller via return value
+        // For now just log it
+        get().logCommand('reload file');
+      } else if (cmd === 'sort priority' || cmd === 'sort p') {
+        get().setSortMode('priority');
+        get().logCommand('sort: priority');
+      } else if (cmd === 'sort date' || cmd === 'sort d') {
+        get().setSortMode('date');
+        get().logCommand('sort: date');
+      } else if (cmd === 'sort project') {
+        get().setSortMode('project');
+        get().logCommand('sort: project');
+      } else if (cmd === 'sort context') {
+        get().setSortMode('context');
+        get().logCommand('sort: context');
+      } else if (cmd === 'u' || cmd === 'undo') {
+        await get().undo(filePath);
+      } else if (cmd.startsWith('theme ')) {
+        const themeName = value.trim().substring(6);
+        get().setTheme(themeName);
+        get().logCommand(`theme: ${themeName}`);
+      } else if (cmd) {
+        get().logCommand(`unknown: ${cmd}`);
+      }
     }
 
     get().closeCommandBar();
@@ -422,6 +502,12 @@ export const useTodoStore = create<TodoState>((set, get) => ({
 
   setTheme: (themeName) => {
     set({ currentTheme: themeName });
+  },
+  toggleSettings: () => {
+    set((state) => ({ showSettings: !state.showSettings }));
+  },
+  setPriorityMode: (mode) => {
+    set({ priorityMode: mode });
   },
 
   // History Actions
@@ -482,6 +568,61 @@ export const useTodoStore = create<TodoState>((set, get) => ({
     if (filePath) {
       await saveTasks(updatedTasks, filePath);
     }
+  },
+
+  // Clipboard Actions
+  yankTask: () => {
+    const { filteredTasks, currentTaskIndex } = get();
+    const task = filteredTasks[currentTaskIndex];
+    if (task) {
+      // Deep copy the task
+      set({ yankedTask: JSON.parse(JSON.stringify(task)) });
+    }
+  },
+
+  pasteTask: async (filePath) => {
+    const { yankedTask, tasks } = get();
+    if (!yankedTask) return;
+
+    get().saveToHistory();
+    const today = new Date().toISOString().split('T')[0];
+
+    // Create a new task based on the yanked one
+    const newTask: Task = {
+      ...JSON.parse(JSON.stringify(yankedTask)),
+      id: tasks.length > 0 ? Math.max(...tasks.map(t => t.id)) + 1 : 1,
+      completed: false,
+      completionDate: null,
+      creationDate: today,
+    };
+
+    const updatedTasks = [...tasks, newTask];
+    set({ tasks: updatedTasks });
+    get().updateFilteredTasks();
+
+    // Move to the new task
+    const newFilteredTasks = get().filteredTasks;
+    const newTaskIndex = newFilteredTasks.findIndex(t => t.id === newTask.id);
+    if (newTaskIndex >= 0) {
+      set({ currentTaskIndex: newTaskIndex });
+    }
+
+    if (filePath) {
+      await saveTasks(updatedTasks, filePath);
+    }
+  },
+
+  // Command log action
+  logCommand: (command) => {
+    const timestamp = new Date().toLocaleTimeString('en-US', { hour12: false });
+    set((state) => {
+      const newLog = [...state.commandLog, `${timestamp} ${command}`];
+      // Keep only last 100 entries
+      if (newLog.length > 100) {
+        newLog.shift();
+      }
+      return { commandLog: newLog };
+    });
   },
 
   // Computed Actions

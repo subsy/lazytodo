@@ -16,7 +16,8 @@ export function CommandBar({ prompt, defaultValue = '', onSubmit, onCancel, onCh
   const theme = useTheme();
 
   useKeyboard((key: any) => {
-    const keyName = key.name || key.char;
+    const keyName = key.name || key.sequence || '';
+    const char = key.sequence || key.char || '';
 
     if (keyName === 'return' || keyName === 'enter') {
       onSubmit(value);
@@ -47,19 +48,18 @@ export function CommandBar({ prompt, defaultValue = '', onSubmit, onCancel, onCh
       setCursorPos(0);
     } else if (keyName === 'end') {
       setCursorPos(value.length);
-    } else if (key.char && key.char.length === 1 && !key.ctrl && !key.meta) {
-      // Printable character
-      const newValue = value.slice(0, cursorPos) + key.char + value.slice(cursorPos);
+    } else if (char.length === 1 && !key.ctrl && !key.meta && char.charCodeAt(0) >= 32) {
+      // Printable character (ASCII 32+)
+      const newValue = value.slice(0, cursorPos) + char + value.slice(cursorPos);
       setValue(newValue);
       setCursorPos(cursorPos + 1);
       onChange?.(newValue);
     }
   });
 
-  // Render value with cursor
+  // Render value with cursor - use block cursor for visibility
   const beforeCursor = value.slice(0, cursorPos);
-  const atCursor = value[cursorPos] || ' ';
-  const afterCursor = value.slice(cursorPos + 1);
+  const afterCursor = value.slice(cursorPos);
 
   return (
     <box
@@ -68,12 +68,12 @@ export function CommandBar({ prompt, defaultValue = '', onSubmit, onCancel, onCh
       padding={1}
     >
       <box flexDirection="row">
-        <text color={theme.colors.highlight}>{prompt} </text>
-        <text color={theme.colors.text}>{beforeCursor}</text>
-        <text color={theme.colors.background} backgroundColor={theme.colors.text}>{atCursor}</text>
-        <text color={theme.colors.text}>{afterCursor}</text>
+        <text fg={theme.colors.highlight}>{prompt} </text>
+        <text fg={theme.colors.text}>{beforeCursor}</text>
+        <text fg={theme.colors.highlight}>█</text>
+        <text fg={theme.colors.text}>{afterCursor}</text>
       </box>
-      <text color={theme.colors.muted}>Enter to save, ESC to cancel</text>
+      <text fg={theme.colors.muted}>Enter to save, ESC to cancel</text>
     </box>
   );
 }

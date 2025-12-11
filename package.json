@@ -1,15 +1,15 @@
 {
-  "name": "todo-cli",
+  "name": "lazytodo",
   "version": "1.0.0",
-  "description": "Fast and beautiful CLI todo.txt manager",
+  "description": "Fast and beautiful vim-centric TUI for todo.txt",
   "module": "index.ts",
   "type": "module",
   "bin": {
-    "todo": "./index.ts"
+    "lazytodo": "./index.ts"
   },
   "scripts": {
     "dev": "bun run index.ts",
-    "build": "bun build index.ts --compile --target=bun --outfile todo",
+    "build": "bun build index.ts --compile --target=bun --outfile lazytodo",
     "test": "bun test"
   },
   "devDependencies": {

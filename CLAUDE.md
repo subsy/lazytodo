@@ -1,106 +1,121 @@
-# Development Guide for Todo TUI
+# Development Guide for lazytodo
 
-This is a CLI/TUI application built with Bun and TypeScript.
+A vim-centric TUI for todo.txt, built with Bun, TypeScript, and OpenTUI.
 
-## Bun Basics
+## Quick Start
 
-Use Bun instead of Node.js for all operations:
-
-- `bun run dev` - Run the app in development mode
-- `bun run build` - Compile to standalone binary
-- `bun test` - Run tests
-- `bun install` - Install dependencies
+```bash
+bun install          # Install dependencies
+bun run dev          # Run in development mode
+bun run build        # Compile to ./lazytodo binary
+bun test             # Run tests
+```
 
 ## Project Structure
 
 ```
-todo-cli/
+lazytodo/
 ├── src/
-│   ├── parser/         # Todo.txt format parser
-│   ├── commands/       # CLI command implementations
-│   ├── ui/             # UI formatting and colors
-│   ├── tui/            # Interactive TUI mode
-│   ├── storage.ts      # File I/O operations
-│   └── config.ts       # User configuration
-├── index.ts            # Main CLI entry point
+│   ├── parser/              # Todo.txt format parser
+│   ├── commands/            # CLI command implementations
+│   ├── ui/                  # CLI output formatting
+│   ├── tui/                 # TUI mode (OpenTUI + React)
+│   │   ├── opentui-app.tsx  # Main TUI app entry
+│   │   ├── components/      # React components
+│   │   │   ├── Layout.tsx         # App container, header, footer
+│   │   │   ├── TaskList.tsx       # Main task list
+│   │   │   ├── TaskItem.tsx       # Individual task row
+│   │   │   ├── PanelContainer.tsx # Side panels container
+│   │   │   ├── PriorityChart.tsx  # Braille bar chart
+│   │   │   ├── TagsPanel.tsx      # Projects/Contexts panels
+│   │   │   ├── StatsPanel.tsx     # Stats in header
+│   │   │   ├── CommandBar.tsx     # Input bar for commands
+│   │   │   ├── HelpScreen.tsx     # Help overlay
+│   │   │   ├── SettingsScreen.tsx # Settings screen
+│   │   │   ├── ThemeSelector.tsx  # Theme picker
+│   │   │   └── Logo.tsx           # Animated ASCII logo
+│   │   ├── store/
+│   │   │   └── useTodoStore.ts    # Zustand state management
+│   │   ├── hooks/
+│   │   │   └── useKeyboard.ts     # Keyboard navigation
+│   │   └── themes/                # Theme definitions
+│   ├── storage.ts           # File I/O (Bun.file/Bun.write)
+│   └── config.ts            # Config file (~/.config/todo-tui/config.toml)
+├── index.ts                 # CLI entry point
 └── package.json
 ```
 
 ## Building
 
-The app compiles to a standalone binary with no dependencies:
-
 ```bash
-bun build index.ts --compile --outfile todo
+bun build index.ts --compile --outfile lazytodo
 ```
 
-This creates a self-contained executable that can be distributed and run without requiring Bun or Node.js to be installed.
+Creates a standalone binary (~114MB) with no runtime dependencies.
 
-## Testing
+## Key Technologies
 
-Use `bun test` to run tests:
+- **OpenTUI** (`@opentui/react`, `@opentui/core`) - React-based terminal UI framework
+- **Zustand** - State management in `useTodoStore.ts`
+- **Commander.js** - CLI argument parsing
+- **TOML** - Config file parsing
 
-```ts
-import { test, expect } from "bun:test";
+## Architecture
 
-test("parse todo.txt task", () => {
-  const task = parseTask("(A) 2025-12-10 Call Mom +Family @phone");
-  expect(task.priority).toBe("A");
-  expect(task.projects).toContain("Family");
-});
-```
+### State Management
 
-## Terminal/TUI Development
+All TUI state lives in `src/tui/store/useTodoStore.ts`:
+- `tasks` / `filteredTasks` - Task data
+- `focusedPanel` - Current panel (tasks, priorities, projects, contexts)
+- `currentTaskIndex` / `panelCursorIndex` - Cursor positions
+- `commandBarMode` - Input mode (command, search, newTask, editTask, addDueDate)
+- `commandLog` - History panel entries
 
-### Key Libraries
+### Keyboard Handling
 
-- **chalk** - Terminal colors and styling
-- **commander** - CLI argument parsing
-- **readline** - Keyboard input handling
+`src/tui/hooks/useKeyboard.ts` handles all keyboard input:
+- Panel navigation: TAB cycles through `['tasks', 'priorities', 'projects', 'contexts']`
+- Vim commands: `:` opens command bar with mode='command'
+- Task actions: space (toggle), n/a (new), e/i (edit), y (yank), p (paste)
 
-### TUI Considerations
+### Priority Chart (Braille)
 
-- Use `stdin.setRawMode(true)` for character-by-character input
-- Use ANSI escape codes for cursor positioning and screen clearing
-- Handle terminal resize events
-- Always restore terminal state on exit (`setRawMode(false)`)
-- Hide cursor during rendering, show on exit
+`src/tui/components/PriorityChart.tsx` uses braille characters for high-resolution bars:
+- `⣀⣤⣶⣿` - 4 levels per character (both columns filled)
+- 5 rows × 4 dots = 20 total granularity levels
+- Proportional scaling: `Math.round((count / maxCount) * totalDots)`
 
-### File I/O
+### Themes
 
-Prefer `Bun.file()` for file operations:
-
-```ts
-// Reading
-const file = Bun.file("todo.txt");
-const content = await file.text();
-
-// Writing
-await Bun.write("todo.txt", content);
-```
+8 themes defined in `src/tui/themes/index.ts`:
+- catppuccin, dracula, nord, gruvbox, tokyonight, solarized, onedark, monokai
+- Each theme defines: background, text, border, highlight, priority colors, etc.
 
 ## Todo.txt Format
 
-Follow the [todo.txt specification](https://github.com/todotxt/todo.txt):
+```
+(A) 2025-12-10 Task text +Project @context due:2025-12-15
+x 2025-12-11 (A) 2025-12-10 Completed task
+```
 
-- Priorities: `(A)` through `(Z)` at start of line
-- Completion: `x 2025-12-10` for completed tasks
-- Dates: `YYYY-MM-DD` format
+- Priority: `(A)` through `(Z)` or `(0)` through `(9)`
 - Projects: `+ProjectName`
 - Contexts: `@ContextName`
-- Metadata: `key:value` pairs
+- Due dates: `due:YYYY-MM-DD`
 
-## Development Workflow
+## Config
 
-1. Make changes to source files in `src/`
-2. Test with `bun run dev`
-3. Run tests with `bun test`
-4. Build binary with `bun run build`
-5. Test the compiled binary: `./todo i`
+File: `~/.config/todo-tui/config.toml`
 
-## Tips
+```toml
+priorityMode = "number"  # or "letter"
+theme = "catppuccin"
+```
 
-- Use `Bun.env` to access environment variables (no need for dotenv)
-- Bun automatically transpiles TypeScript
-- Use `--hot` flag for hot reload during development
-- The compiled binary includes all dependencies and the Bun runtime
+## Development Tips
+
+- Use `bun run dev` for quick iteration (no compile step)
+- OpenTUI renders React components to terminal - use `<box>`, `<text>` elements
+- Zustand store updates trigger re-renders automatically
+- Test binary after changes: `./lazytodo tui`
+- Check braille rendering: characters may display differently across terminals/fonts

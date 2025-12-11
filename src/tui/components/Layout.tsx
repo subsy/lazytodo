@@ -1,5 +1,7 @@
 import React, { ReactNode } from 'react';
 import { useTheme } from '../themes/ThemeContext.tsx';
+import { StatsPanel, useStatsPanelWidth } from './StatsPanel.tsx';
+import { Logo } from './Logo.tsx';
 
 interface HeaderProps {
   children: ReactNode;
@@ -7,10 +9,19 @@ interface HeaderProps {
 
 export function Header({ children }: HeaderProps) {
   const theme = useTheme();
+  const statsPanelWidth = useStatsPanelWidth();
 
   return (
-    <box borderStyle="single" borderColor={theme.colors.border} padding={1}>
-      <text color={theme.colors.highlight}>{children}</text>
+    <box flexDirection="row" height={5}>
+      <box borderStyle="single" borderColor={theme.colors.border} paddingLeft={1} paddingRight={1} width={30}>
+        <Logo />
+      </box>
+      <box borderStyle="single" borderColor={theme.colors.border} paddingLeft={1} paddingRight={1} flexGrow={1}>
+        <text fg={theme.colors.highlight}>{children}</text>
+      </box>
+      <box width={statsPanelWidth}>
+        <StatsPanel />
+      </box>
     </box>
   );
 }
@@ -23,8 +34,8 @@ export function Footer({ children }: FooterProps) {
   const theme = useTheme();
 
   return (
-    <box borderStyle="single" borderColor={theme.colors.border} padding={1}>
-      <text color={theme.colors.textDim}>{children}</text>
+    <box borderStyle="single" borderColor={theme.colors.border} paddingLeft={1} paddingRight={1}>
+      <text fg={theme.colors.textDim}>{children}</text>
     </box>
   );
 }

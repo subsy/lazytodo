@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useTodoStore } from '../store/useTodoStore.ts';
 import { TaskItem } from './TaskItem.tsx';
 import { useTheme } from '../themes/ThemeContext.tsx';
@@ -9,10 +9,24 @@ export function TaskList() {
   const focusedPanel = useTodoStore(state => state.focusedPanel);
   const theme = useTheme();
 
+  // Get terminal width
+  const [termWidth, setTermWidth] = useState(process.stdout.columns || 80);
+
+  useEffect(() => {
+    const handleResize = () => {
+      setTermWidth(process.stdout.columns || 80);
+    };
+
+    process.stdout.on('resize', handleResize);
+    return () => {
+      process.stdout.off('resize', handleResize);
+    };
+  }, []);
+
   if (filteredTasks.length === 0) {
     return (
       <box padding={1}>
-        <text color={theme.colors.muted}>No tasks found. Press 'n' to add a task.</text>
+        <text fg={theme.colors.muted}>No tasks found. Press 'n' to add a task.</text>
       </box>
     );
   }
@@ -24,6 +38,7 @@ export function TaskList() {
           key={task.id}
           task={task}
           isSelected={focusedPanel === 'tasks' && index === currentTaskIndex}
+          availableWidth={termWidth}
         />
       ))}
     </box>
